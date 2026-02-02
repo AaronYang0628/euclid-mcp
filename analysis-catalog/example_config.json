@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "euclid-catalog": {
+      "command": "python",
+      "args": [
+        "-m",
+        "euclid_catalog_mcp.server"
+      ],
+      "env": {}
+    }
+  }
+}

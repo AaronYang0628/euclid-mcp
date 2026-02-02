@@ -1,0 +1,27 @@
+[project]
+name = "euclid-catalog-mcp"
+version = "0.1.0"
+description = "MCP server for parsing Euclid catalog FITS files"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.0.0",
+    "astropy>=6.0.0",
+    "numpy>=1.24.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.scripts]
+euclid-catalog-mcp = "euclid_catalog_mcp.server:main"

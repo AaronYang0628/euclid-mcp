@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod +x .devcontainer/setup.sh)",
+      "Bash(npm install)",
+      "Bash(npm run build)",
+      "Bash(echo:*)",
+      "Bash(tree analysis-catalog/ -L 3)",
+      "Bash(pip install:*)",
+      "Bash(claude-code config list:*)",
+      "Bash(python create_sample_fits.py)",
+      "Bash(python:*)",
+      "Bash(npx:*)",
+      "Bash(lsof:*)",
+      "Bash(chmod:*)",
+      "Bash(netstat -tlnp)",
+      "Bash(curl:*)",
+      "Bash(ls -la *.py *.fits)",
+      "Bash(ss:*)",
+      "Bash(pkill:*)",
+      "Bash(kill:*)"
+    ]
+  }
+}
