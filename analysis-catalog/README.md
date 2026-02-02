@@ -13,7 +13,7 @@ MCP server for parsing and analyzing Euclid mission catalog FITS files.
 ## Installation
 
 ```bash
-pip install -e .
+cd analysis-catalog && pip install -e .
 ```
 
 ## Usage

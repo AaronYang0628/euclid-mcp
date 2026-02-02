@@ -1,7 +1,8 @@
 """FITS catalog file parser for Euclid mission data."""
 
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 from astropy.io import fits
 from astropy.table import Table
@@ -50,16 +51,12 @@ class FITSCatalogParser:
         """Get basic information about the FITS catalog.
 
         Returns:
-            Dictionary with basic catalog information
+            Dictionary with basic catalog information including coordinate ranges
         """
         if not self.hdul:
             raise RuntimeError("FITS file not opened")
 
-        info = {
-            "filename": self.fits_path.name,
-            "num_hdus": len(self.hdul),
-            "hdus": []
-        }
+        info = {"filename": self.fits_path.name, "num_hdus": len(self.hdul), "hdus": []}
 
         for i, hdu in enumerate(self.hdul):
             hdu_info = {
@@ -77,6 +74,20 @@ class FITSCatalogParser:
         if self.table:
             info["num_objects"] = len(self.table)
             info["num_fields"] = len(self.table.colnames)
+
+            # Add coordinate ranges if available
+            if (
+                "RIGHT_ASCENSION" in self.table.colnames
+                and "DECLINATION" in self.table.colnames
+            ):
+                ra = self.table["RIGHT_ASCENSION"]
+                dec = self.table["DECLINATION"]
+                info["coordinate_ranges"] = {
+                    "ra_min": float(np.min(ra)),
+                    "ra_max": float(np.max(ra)),
+                    "dec_min": float(np.min(dec)),
+                    "dec_max": float(np.max(dec)),
+                }
 
         return info
 
@@ -108,7 +119,11 @@ class FITSCatalogParser:
 
             # Add basic statistics for numeric columns
             if np.issubdtype(col.dtype, np.number):
-                valid_data = col[~np.isnan(col)] if np.issubdtype(col.dtype, np.floating) else col
+                valid_data = (
+                    col[~np.isnan(col)]
+                    if np.issubdtype(col.dtype, np.floating)
+                    else col
+                )
                 if len(valid_data) > 0:
                     field_info["statistics"] = {
                         "min": float(np.min(valid_data)),
@@ -121,8 +136,9 @@ class FITSCatalogParser:
 
         return fields
 
-    def get_objects(self, start: int = 0, limit: int = 100,
-                   columns: Optional[List[str]] = None) -> Dict[str, Any]:
+    def get_objects(
+        self, start: int = 0, limit: int = 100, columns: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
         """Get object data from the catalog.
 
         Args:
@@ -151,11 +167,15 @@ class FITSCatalogParser:
                 value = row[colname]
                 # Convert numpy types to Python types
                 if isinstance(value, (np.integer, np.floating)):
-                    obj[colname] = float(value) if np.issubdtype(type(value), np.floating) else int(value)
+                    obj[colname] = (
+                        float(value)
+                        if np.issubdtype(type(value), np.floating)
+                        else int(value)
+                    )
                 elif isinstance(value, np.ndarray):
                     obj[colname] = value.tolist()
                 elif isinstance(value, bytes):
-                    obj[colname] = value.decode('utf-8', errors='ignore')
+                    obj[colname] = value.decode("utf-8", errors="ignore")
                 else:
                     obj[colname] = str(value)
             objects.append(obj)
@@ -165,7 +185,7 @@ class FITSCatalogParser:
             "end": end,
             "total": len(self.table),
             "count": len(objects),
-            "objects": objects
+            "objects": objects,
         }
 
     def get_statistics(self) -> Dict[str, Any]:
