@@ -18,7 +18,9 @@
       "Bash(ls -la *.py *.fits)",
       "Bash(ss:*)",
       "Bash(pkill:*)",
-      "Bash(kill:*)"
+      "Bash(kill:*)",
+      "Bash(pip show mcp)",
+      "Bash(/usr/local/bin/python:*)"
     ]
   }
 }

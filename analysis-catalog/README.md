@@ -34,7 +34,7 @@ Add to your Claude Desktop configuration:
 ```
 
 ```shell
-DANGEROUSLY_OMIT_AUTH=true  npx @modelcontextprotocol/inspector python -m euclid_catalog_mcp.server 
+DANGEROUSLY_OMIT_AUTH=true  npx @modelcontextprotocol/inspector python -m euclid_catalog_mcp.server
 ```
 
 ### Available Tools

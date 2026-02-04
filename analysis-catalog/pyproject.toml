@@ -8,6 +8,9 @@ dependencies = [
     "mcp>=1.0.0",
     "astropy>=6.0.0",
     "numpy>=1.24.0",
+    "starlette>=0.27.0",
+    "uvicorn>=0.23.0",
+    "fastmcp>=2.14.0",
 ]
 
 [project.optional-dependencies]
@@ -24,4 +27,4 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [project.scripts]
-euclid-catalog-mcp = "euclid_catalog_mcp.server:main"
+euclid-catalog-mcp = "euclid_catalog_mcp.server_fastmcp:mcp.run"
