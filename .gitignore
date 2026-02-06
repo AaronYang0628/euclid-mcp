@@ -64,3 +64,5 @@ dmypy.json
 # Environment variables
 .env
 .env.local
+cross-matching/tests/test_desi_matched.fits
+sweep-055m055-060m050.fits

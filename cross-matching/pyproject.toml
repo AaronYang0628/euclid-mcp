@@ -1,0 +1,31 @@
+[project]
+name = "euclid-crossmatch-mcp"
+version = "0.1.0"
+description = "MCP server for cross-matching Euclid and DESI catalogs"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.0.0",
+    "astropy>=6.0.0",
+    "numpy>=1.24.0",
+    "scipy>=1.10.0",
+    "starlette>=0.27.0",
+    "uvicorn>=0.23.0",
+    "fastmcp>=2.14.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.scripts]
+euclid-crossmatch-mcp = "euclid_crossmatch_mcp.server:mcp.run"

@@ -20,7 +20,17 @@
       "Bash(pkill:*)",
       "Bash(kill:*)",
       "Bash(pip show mcp)",
-      "Bash(/usr/local/bin/python:*)"
+      "Bash(/usr/local/bin/python:*)",
+      "Bash(mount:*)",
+      "Bash(tree:*)",
+      "Bash(export EUCLID_CATALOG_PATH=\"/workspaces/dali-tutorial/tmp/projects_CSST_shared-data_euclid_aws-mirrors_q1_catalogs_MER_FINAL_CATALOG_102018211_EUC_MER_FINAL-CAT_TILE102018211-CC66F6_20241018T214045.289017Z_00.00.fits\")",
+      "Bash(export DESI_CATALOG_PATH=\"/workspaces/euclid-mcp/cross-matching/tests/test_desi_catalog.fits\")",
+      "Bash(find:*)",
+      "Bash(export DESI_CATALOG_PATH:*)",
+      "Bash(export DESI_CATALOG_PATH=\"/workspaces/euclid-mcp/cross-matching/tests/test_desi_matched.fits\")",
+      "Bash(ls:*)",
+      "Bash(python -m euclid_crossmatch_mcp.server:*)",
+      "Bash(python3 -m euclid_crossmatch_mcp.server:*)"
     ]
   }
 }

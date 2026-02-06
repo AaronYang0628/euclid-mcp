@@ -98,7 +98,7 @@ def get_catalog_statistics(catalog_path: str) -> str:
     except Exception as e:
         return json.dumps({"error": str(e)})
 
-
+ 
 if __name__ == "__main__":
     # Run SSE server on 0.0.0.0 for devcontainer access
-    mcp.run(transport="sse", host="0.0.0.0", port=8000)
+    mcp.run(transport="sse", host="0.0.0.0", port=8004)

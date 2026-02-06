@@ -13,7 +13,7 @@ MCP server for parsing and analyzing Euclid mission catalog FITS files.
 ## Installation
 
 ```bash
-cd analysis-catalog && pip install -e .
+cd /workspaces/euclid-mcp/analysis-catalog && pip install -e .
 ```
 
 ## Usage
@@ -33,7 +33,10 @@ Add to your Claude Desktop configuration:
 }
 ```
 
+
 ```shell
+python -m euclid_catalog_mcp.server
+
 DANGEROUSLY_OMIT_AUTH=true  npx @modelcontextprotocol/inspector python -m euclid_catalog_mcp.server
 ```
 
