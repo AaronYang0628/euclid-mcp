@@ -97,13 +97,38 @@ class CrossMatcher:
         euclid_nearby_mask = euclid_seps < search_radius_arcsec * u.arcsec
 
         if not np.any(euclid_nearby_mask):
+            # Generate filename with timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"crossmatch_results_{timestamp}.json"
+            file_path = self.output_dir / filename
+
+            # Prepare result with no matches
+            result = {
+                "status": "no_euclid_sources",
+                "message": f"No Euclid sources found within {search_radius_arcsec} arcsec of RA={ra:.6f}, DEC={dec:.6f}",
+                "input": {"ra": ra, "dec": dec},
+                "search_radius_arcsec": search_radius_arcsec,
+                "match_radius_arcsec": self.match_radius,
+                "euclid_sources_found": 0,
+                "matches_found": 0,
+                "matches": [],
+            }
+
+            # Save to file
+            with open(file_path, "w") as f:
+                json.dump(result, f, indent=2)
+
+            # Return with file path and empty preview
             return {
                 "status": "no_euclid_sources",
                 "message": f"No Euclid sources found within {search_radius_arcsec} arcsec of RA={ra:.6f}, DEC={dec:.6f}",
                 "input": {"ra": ra, "dec": dec},
                 "search_radius_arcsec": search_radius_arcsec,
+                "match_radius_arcsec": self.match_radius,
                 "euclid_sources_found": 0,
-                "matches": [],
+                "matches_found": 0,
+                "output_file": str(file_path),
+                "preview": [],
             }
 
         # Get nearby Euclid sources
