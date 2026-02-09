@@ -31,7 +31,12 @@
       "Bash(ls:*)",
       "Bash(python -m euclid_crossmatch_mcp.server:*)",
       "Bash(python3 -m euclid_crossmatch_mcp.server:*)",
-      "WebFetch(domain:gitlab.zhejianglab.com)"
+      "WebFetch(domain:gitlab.zhejianglab.com)",
+      "Bash(kubectl:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push)"
     ]
   }
 }
