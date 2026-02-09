@@ -1,9 +1,9 @@
 """MCP server for Euclid catalog FITS file parsing - using FastMCP."""
 
 import json
+import os
 import sys
 from pathlib import Path
-from typing import Any
 
 from fastmcp import FastMCP
 
@@ -15,8 +15,69 @@ except ImportError:
     sys.path.insert(0, str(Path(__file__).parent))
     from fits_parser import FITSCatalogParser
 
+# Get catalog base path from environment variable
+CATALOG_BASE_PATH = os.getenv("CATALOG_DATA_PATH", "/data/catalogs")
+
 # Create FastMCP server
 mcp = FastMCP("euclid-catalog-mcp")
+
+
+def resolve_catalog_path(catalog_path: str) -> str:
+    """Resolve catalog path, supporting both absolute and relative paths.
+
+    If the path is relative, it will be resolved relative to CATALOG_BASE_PATH.
+
+    Args:
+        catalog_path: Absolute or relative path to catalog file
+
+    Returns:
+        Absolute path to catalog file
+    """
+    path = Path(catalog_path)
+    if path.is_absolute():
+        return str(path)
+    return str(Path(CATALOG_BASE_PATH) / catalog_path)
+
+
+@mcp.tool()
+def list_catalogs() -> str:
+    """List all available FITS catalog files in the catalog directory.
+
+    Returns:
+        JSON string with list of available catalog files
+    """
+    try:
+        catalog_dir = Path(CATALOG_BASE_PATH)
+        if not catalog_dir.exists():
+            return json.dumps(
+                {
+                    "error": f"Catalog directory does not exist: {CATALOG_BASE_PATH}",
+                    "catalogs": [],
+                }
+            )
+
+        # Find all .fits files
+        fits_files = []
+        for fits_file in catalog_dir.rglob("*.fits"):
+            relative_path = fits_file.relative_to(catalog_dir)
+            fits_files.append(
+                {
+                    "name": fits_file.name,
+                    "path": str(relative_path),
+                    "size_mb": round(fits_file.stat().st_size / (1024 * 1024), 2),
+                }
+            )
+
+        return json.dumps(
+            {
+                "catalog_base_path": CATALOG_BASE_PATH,
+                "total_catalogs": len(fits_files),
+                "catalogs": sorted(fits_files, key=lambda x: x["name"]),
+            },
+            indent=2,
+        )
+    except Exception as e:
+        return json.dumps({"error": str(e)})
 
 
 @mcp.tool()
@@ -24,13 +85,14 @@ def parse_fits_catalog(catalog_path: str) -> str:
     """Parse a FITS catalog file and return basic information including HDU structure, number of objects, fields, and coordinate ranges.
 
     Args:
-        catalog_path: Path to the FITS catalog file
+        catalog_path: Path to the FITS catalog file (absolute or relative to catalog base path)
 
     Returns:
         JSON string with catalog information
     """
     try:
-        with FITSCatalogParser(catalog_path) as parser:
+        resolved_path = resolve_catalog_path(catalog_path)
+        with FITSCatalogParser(resolved_path) as parser:
             info = parser.get_basic_info()
         return json.dumps(info, indent=2)
     except Exception as e:
@@ -42,13 +104,14 @@ def get_catalog_fields(catalog_path: str) -> str:
     """Get detailed information about all fields/columns in the catalog including data types, units, and statistics.
 
     Args:
-        catalog_path: Path to the FITS catalog file
+        catalog_path: Path to the FITS catalog file (absolute or relative to catalog base path)
 
     Returns:
         JSON string with field information
     """
     try:
-        with FITSCatalogParser(catalog_path) as parser:
+        resolved_path = resolve_catalog_path(catalog_path)
+        with FITSCatalogParser(resolved_path) as parser:
             fields = parser.get_fields()
         return json.dumps(fields, indent=2)
     except Exception as e:
@@ -65,7 +128,7 @@ def get_catalog_objects(
     """Retrieve object/source data from the catalog with optional pagination and column filtering.
 
     Args:
-        catalog_path: Path to the FITS catalog file
+        catalog_path: Path to the FITS catalog file (absolute or relative to catalog base path)
         start: Starting row index (default: 0)
         limit: Maximum number of objects to return (default: 100)
         columns: List of column names to include (omit for all columns)
@@ -74,7 +137,8 @@ def get_catalog_objects(
         JSON string with object data
     """
     try:
-        with FITSCatalogParser(catalog_path) as parser:
+        resolved_path = resolve_catalog_path(catalog_path)
+        with FITSCatalogParser(resolved_path) as parser:
             objects = parser.get_objects(start=start, limit=limit, columns=columns)
         return json.dumps(objects, indent=2)
     except Exception as e:
@@ -86,19 +150,20 @@ def get_catalog_statistics(catalog_path: str) -> str:
     """Get statistical summary of the catalog including total objects, fields, and field types.
 
     Args:
-        catalog_path: Path to the FITS catalog file
+        catalog_path: Path to the FITS catalog file (absolute or relative to catalog base path)
 
     Returns:
         JSON string with statistics
     """
     try:
-        with FITSCatalogParser(catalog_path) as parser:
+        resolved_path = resolve_catalog_path(catalog_path)
+        with FITSCatalogParser(resolved_path) as parser:
             stats = parser.get_statistics()
         return json.dumps(stats, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)})
 
- 
+
 if __name__ == "__main__":
     # Run SSE server on 0.0.0.0 for devcontainer access
-    mcp.run(transport="sse", host="0.0.0.0", port=8004)
+    mcp.run(transport="sse", host="0.0.0.0", port=8000)

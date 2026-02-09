@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: euclid-catalog-mcp
+  labels:
+    app: euclid-catalog-mcp
+    version: v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: euclid-catalog-mcp
+  template:
+    metadata:
+      labels:
+        app: euclid-catalog-mcp
+        version: v1
+    spec:
+      containers:
+      - name: euclid-catalog-mcp
+        image: euclid-catalog-mcp:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        env:
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        envFrom:
+        - configMapRef:
+            name: euclid-catalog-mcp-config
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: catalog-data
+          mountPath: /data/catalogs
+        livenessProbe:
+          tcpSocket:
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          tcpSocket:
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      volumes:
+      - name: catalog-data
+        persistentVolumeClaim:
+          claimName: euclid-catalog-pvc
+      restartPolicy: Always

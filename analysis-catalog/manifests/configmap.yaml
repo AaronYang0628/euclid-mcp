@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: euclid-catalog-mcp-config
+  labels:
+    app: euclid-catalog-mcp
+data:
+  CATALOG_DATA_PATH: "/data/catalogs"
+  MCP_SERVER_NAME: "euclid-catalog-mcp"
