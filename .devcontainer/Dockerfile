@@ -44,7 +44,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Claude Code CLI and MCP Inspector
-RUN npm install -g @anthropic-ai/claude-code @modelcontextprotocol/inspector
+RUN npm install -g @anthropic-ai/claude-code @modelcontextprotocol/inspector ccusage
 
 # Set working directory
 WORKDIR /workspace

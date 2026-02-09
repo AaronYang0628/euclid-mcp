@@ -82,10 +82,12 @@ def list_catalogs() -> str:
 
 @mcp.tool()
 def parse_fits_catalog(catalog_path: str) -> str:
-    """Parse a FITS catalog file and return basic information including HDU structure, number of objects, fields, and coordinate ranges.
+    """Parse a FITS catalog file and return basic information.
+
+    Returns HDU structure, number of objects, fields, and coordinate ranges.
 
     Args:
-        catalog_path: Path to the FITS catalog file (absolute or relative to catalog base path)
+        catalog_path: Path to FITS file (absolute or relative to catalog base)
 
     Returns:
         JSON string with catalog information
@@ -101,10 +103,12 @@ def parse_fits_catalog(catalog_path: str) -> str:
 
 @mcp.tool()
 def get_catalog_fields(catalog_path: str) -> str:
-    """Get detailed information about all fields/columns in the catalog including data types, units, and statistics.
+    """Get detailed field information from catalog.
+
+    Returns data types, units, and statistics for all columns.
 
     Args:
-        catalog_path: Path to the FITS catalog file (absolute or relative to catalog base path)
+        catalog_path: Path to FITS file (absolute or relative to catalog base)
 
     Returns:
         JSON string with field information
@@ -125,13 +129,13 @@ def get_catalog_objects(
     limit: int = 100,
     columns: list[str] | None = None,
 ) -> str:
-    """Retrieve object/source data from the catalog with optional pagination and column filtering.
+    """Retrieve object data from catalog with pagination.
 
     Args:
-        catalog_path: Path to the FITS catalog file (absolute or relative to catalog base path)
+        catalog_path: Path to FITS file (absolute or relative to catalog base)
         start: Starting row index (default: 0)
-        limit: Maximum number of objects to return (default: 100)
-        columns: List of column names to include (omit for all columns)
+        limit: Maximum objects to return (default: 100)
+        columns: Column names to include (omit for all)
 
     Returns:
         JSON string with object data
@@ -147,10 +151,12 @@ def get_catalog_objects(
 
 @mcp.tool()
 def get_catalog_statistics(catalog_path: str) -> str:
-    """Get statistical summary of the catalog including total objects, fields, and field types.
+    """Get statistical summary of catalog.
+
+    Returns total objects, fields, and field types.
 
     Args:
-        catalog_path: Path to the FITS catalog file (absolute or relative to catalog base path)
+        catalog_path: Path to FITS file (absolute or relative to catalog base)
 
     Returns:
         JSON string with statistics
