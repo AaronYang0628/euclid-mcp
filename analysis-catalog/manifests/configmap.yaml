@@ -4,6 +4,8 @@ metadata:
   name: euclid-catalog-mcp-config
   labels:
     app: euclid-catalog-mcp
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
 data:
   CATALOG_DATA_PATH: "/data/catalogs"
   MCP_SERVER_NAME: "euclid-catalog-mcp"

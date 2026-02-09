@@ -4,6 +4,8 @@ metadata:
   name: euclid-catalog-pv
   labels:
     app: euclid-catalog-mcp
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
 spec:
   capacity:
     storage: 500Gi
@@ -29,6 +31,8 @@ metadata:
   name: euclid-catalog-pvc
   labels:
     app: euclid-catalog-mcp
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   accessModes:
     - ReadWriteOnce

@@ -5,6 +5,8 @@ metadata:
   labels:
     app: euclid-catalog-mcp
     version: v1
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
 spec:
   replicas: 1
   selector:
