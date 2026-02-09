@@ -32,6 +32,8 @@ spec:
               value: "0.0.0.0"
             - name: MCP_AUTO_OPEN_ENABLED
               value: "false"
+            - name: ALLOWED_ORIGINS
+              value: "https://inspector.mcp.ay.dev:32443,https://inspector.mcp.ay.dev"
           resources:
             requests:
               memory: "256Mi"
