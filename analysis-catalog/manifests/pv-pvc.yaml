@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: euclid-catalog-pv
+  labels:
+    app: euclid-catalog-mcp
+spec:
+  capacity:
+    storage: 500Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-path
+  hostPath:
+    path: /home/aaron/Downloads/upload
+    type: Directory
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - zjlab-pc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: euclid-catalog-pvc
+  labels:
+    app: euclid-catalog-mcp
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Gi
+  storageClassName: local-path
+  volumeName: euclid-catalog-pv

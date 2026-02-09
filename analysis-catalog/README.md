@@ -52,3 +52,9 @@ DANGEROUSLY_OMIT_AUTH=true  npx @modelcontextprotocol/inspector python -m euclid
 - Python >= 3.10
 - astropy >= 6.0.0
 - mcp >= 1.0.0
+
+## Building the Docker Image
+```bash
+cd /workspaces/euclid-mcp/analysis-catalog
+podman build -t harbor.zhejianglab.com/ayb-dev/euclid-catalog-mcp:latest .
+```

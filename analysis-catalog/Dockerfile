@@ -6,7 +6,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PIP_NO_CACHE_DIR=1
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY && \
+    apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
     && rm -rf /var/lib/apt/lists/*
@@ -19,7 +20,9 @@ COPY pyproject.toml ./
 COPY src/ ./src/
 
 # Install Python dependencies
-RUN pip install --upgrade pip && \
+RUN unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY && \
+    pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple && \
+    pip install --upgrade pip && \
     pip install -e .
 
 # Create data directory

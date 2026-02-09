@@ -5,24 +5,22 @@ metadata:
   labels:
     app: euclid-catalog-mcp
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
     cert-manager.io/cluster-issuer: "self-signed-ca-issuer"
+    nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
   ingressClassName: nginx
   tls:
-  - hosts:
-    - euclid-catalog.example.com
-    secretName: euclid-catalog-tls
+    - hosts:
+        - catalog.euclid.mcp.ay.dev
+      secretName: euclid-catalog-tls
   rules:
-  - host: euclid-catalog.example.com
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: euclid-catalog-mcp
-            port:
-              number: 8000
+    - host: catalog.euclid.mcp.ay.dev
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: euclid-catalog-mcp
+                port:
+                  number: 8000
