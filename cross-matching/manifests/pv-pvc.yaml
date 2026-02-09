@@ -1,0 +1,87 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: euclid-crossmatch-catalog-pv
+  labels:
+    app: euclid-crossmatch-mcp
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  capacity:
+    storage: 500Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-path
+  hostPath:
+    path: /home/aaron/Downloads/upload
+    type: Directory
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - zjlab-pc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: euclid-crossmatch-catalog-pvc
+  labels:
+    app: euclid-crossmatch-mcp
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Gi
+  storageClassName: local-path
+  volumeName: euclid-crossmatch-catalog-pv
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: euclid-crossmatch-output-pv
+  labels:
+    app: euclid-crossmatch-mcp
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  capacity:
+    storage: 100Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-path
+  hostPath:
+    path: /home/aaron/Downloads/output
+    type: DirectoryOrCreate
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - zjlab-pc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: euclid-crossmatch-output-pvc
+  labels:
+    app: euclid-crossmatch-mcp
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: local-path
+  volumeName: euclid-crossmatch-output-pv

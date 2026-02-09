@@ -165,5 +165,10 @@ def get_catalog_statistics(catalog_path: str) -> str:
 
 
 if __name__ == "__main__":
-    # Run SSE server on 0.0.0.0 for devcontainer access
-    mcp.run(transport="sse", host="0.0.0.0", port=8000)
+    if "--stdio" in sys.argv:
+        # Run in stdio mode (for MCP Inspector with stdio transport)
+        mcp.run(transport="stdio")
+    else:
+        # Run SSE server on 0.0.0.0 for devcontainer access (default)
+        # This allows N8N and other HTTP clients to connect
+        mcp.run(transport="sse", host="0.0.0.0", port=8000)

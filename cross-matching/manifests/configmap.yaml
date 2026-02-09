@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: euclid-crossmatch-mcp-config
+  labels:
+    app: euclid-crossmatch-mcp
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+data:
+  EUCLID_CATALOG_PATH: "/data/catalogs/euclid/MER_FINAL_CATALOG_102018211_EUC_MER_FINAL-CAT_TILE102018211-CC66F6_20241018T214045.289017Z_00.00.fits"
+  DESI_CATALOG_PATH: "/data/catalogs/desi/sweep-055m055-060m050.fits"
+  MATCH_RADIUS_ARCSEC: "1.0"
+  CROSSMATCH_OUTPUT_DIR: "/data/output"
+  MAX_INLINE_RESULTS: "10"

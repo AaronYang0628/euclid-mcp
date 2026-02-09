@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: euclid-crossmatch-mcp
+  labels:
+    app: euclid-crossmatch-mcp
+    version: v1
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: euclid-crossmatch-mcp
+  template:
+    metadata:
+      labels:
+        app: euclid-crossmatch-mcp
+        version: v1
+    spec:
+      containers:
+        - name: euclid-crossmatch-mcp
+          image: harbor.zhejianglab.com/ayb-dev/euclid-crossmatch-mcp:v20260209
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+          envFrom:
+            - configMapRef:
+                name: euclid-crossmatch-mcp-config
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "4Gi"
+              cpu: "2000m"
+          volumeMounts:
+            - name: catalog-data
+              mountPath: /data/catalogs
+            - name: output-data
+              mountPath: /data/output
+          livenessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+      volumes:
+        - name: catalog-data
+          persistentVolumeClaim:
+            claimName: euclid-crossmatch-catalog-pvc
+        - name: output-data
+          persistentVolumeClaim:
+            claimName: euclid-crossmatch-output-pvc
+      restartPolicy: Always

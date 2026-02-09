@@ -2,13 +2,13 @@ kubectl -n argocd apply -f - <<EOF
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: euclid-catalog-mcp
+  name: euclid-crossmatch-mcp
 spec:
   project: default
   source:
     repoURL: 'https://gitlab.zhejianglab.com/AaronYang/euclid-mcp.git'
     targetRevision: main
-    path: analysis-catalog/manifests
+    path: cross-matching/manifests
   syncPolicy:
     automated:
       prune: true

@@ -177,3 +177,9 @@ FITS file (sweep catalog) with HDU 1 containing a table with columns:
 
 Download DESI sweep catalogs from:
 https://portal.nersc.gov/cfs/cosmo/data/legacysurvey/dr10/
+
+## Building the Docker Image
+```bash
+cd /workspaces/euclid-mcp/cross-matching
+podman build -t harbor.zhejianglab.com/ayb-dev/euclid-cross-matching-mcp:latest .
+```

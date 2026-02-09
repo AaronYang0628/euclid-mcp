@@ -108,4 +108,4 @@ if __name__ == "__main__":
     else:
         # Run SSE server on 0.0.0.0 for devcontainer access (default)
         # This allows N8N and other HTTP clients to connect
-        mcp.run(transport="sse", host="0.0.0.0", port=8002)
+        mcp.run(transport="sse", host="0.0.0.0", port=8000)
