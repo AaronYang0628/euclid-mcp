@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: euclid-crossmatch-mcp
-          image: harbor.zhejianglab.com/ayb-dev/euclid-crossmatch-mcp:v20260209
+          image: harbor.zhejianglab.com/ayb-dev/euclid-cross-matching-mcp:v20260209
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
