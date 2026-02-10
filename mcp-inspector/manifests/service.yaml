@@ -5,15 +5,17 @@ metadata:
   labels:
     app: mcp-inspector
 spec:
-  type: ClusterIP
+  type: NodePort
   ports:
     - port: 6274
       targetPort: 6274
       protocol: TCP
       name: web
+      nodePort: 32225
     - port: 6277
       targetPort: 6277
       protocol: TCP
       name: mcp
+      nodePort: 32220
   selector:
     app: mcp-inspector
