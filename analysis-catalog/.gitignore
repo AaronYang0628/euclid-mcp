@@ -39,3 +39,7 @@ htmlcov/
 # FITS files (for testing)
 *.fits
 *.fit
+
+# Environment variables
+.env
+.env.local
