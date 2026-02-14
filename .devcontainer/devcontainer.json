@@ -39,8 +39,7 @@
   "remoteUser": "root",
   "mounts": [
     "source=${localEnv:HOME}/.ssh,target=/root/.ssh,readonly,type=bind,consistency=cached",
-    "source=/media/aaron/DATA,target=/data,readonly,type=bind",
-    "source=/home/aaron/Downloads,target=/home/node/.n8n-files,type=bind"
+    "source=/data/catalogs, target=/home/aaron/Downloads/upload,type=bind"
   ],
   "forwardPorts": [],
   "runArgs": [

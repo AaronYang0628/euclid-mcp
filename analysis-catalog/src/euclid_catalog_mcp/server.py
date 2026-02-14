@@ -10,10 +10,12 @@ from fastmcp import FastMCP
 # Handle both relative and absolute imports
 try:
     from .fits_parser import FITSCatalogParser
+    from .storage import LocalStorage, S3Storage
 except ImportError:
     # Add parent directory to path for direct execution
     sys.path.insert(0, str(Path(__file__).parent))
     from fits_parser import FITSCatalogParser
+    from storage import LocalStorage, S3Storage
 
 # Get catalog base path from environment variable
 CATALOG_BASE_PATH = os.getenv("CATALOG_DATA_PATH", "/data/catalogs")
@@ -21,18 +23,46 @@ CATALOG_BASE_PATH = os.getenv("CATALOG_DATA_PATH", "/data/catalogs")
 # Create FastMCP server
 mcp = FastMCP("euclid-catalog-mcp")
 
+# Initialize storage backends
+local_storage = LocalStorage(CATALOG_BASE_PATH)
+s3_storage = None  # Lazy initialization
+
+
+def get_storage_backend(path: str):
+    """Get appropriate storage backend based on path.
+
+    Args:
+        path: File path (local or s3://)
+
+    Returns:
+        Tuple of (storage_backend, resolved_path)
+    """
+    global s3_storage
+
+    if path.startswith("s3://"):
+        if s3_storage is None:
+            s3_storage = S3Storage()
+        return s3_storage, path
+    else:
+        # Local path - use existing resolve logic
+        return local_storage, path
+
 
 def resolve_catalog_path(catalog_path: str) -> str:
     """Resolve catalog path, supporting both absolute and relative paths.
 
     If the path is relative, it will be resolved relative to CATALOG_BASE_PATH.
+    S3 paths (s3://) are returned as-is.
 
     Args:
-        catalog_path: Absolute or relative path to catalog file
+        catalog_path: Absolute, relative, or S3 path to catalog file
 
     Returns:
-        Absolute path to catalog file
+        Resolved path to catalog file
     """
+    if catalog_path.startswith("s3://"):
+        return catalog_path
+
     path = Path(catalog_path)
     if path.is_absolute():
         return str(path)
@@ -40,37 +70,26 @@ def resolve_catalog_path(catalog_path: str) -> str:
 
 
 @mcp.tool()
-def list_catalogs() -> str:
+def list_catalogs(path: str = "") -> str:
     """List all available FITS catalog files in the catalog directory.
+
+    Args:
+        path: Directory path (local or s3://). Defaults to CATALOG_BASE_PATH.
 
     Returns:
         JSON string with list of available catalog files
     """
     try:
-        catalog_dir = Path(CATALOG_BASE_PATH)
-        if not catalog_dir.exists():
-            return json.dumps(
-                {
-                    "error": f"Catalog directory does not exist: {CATALOG_BASE_PATH}",
-                    "catalogs": [],
-                }
-            )
+        # Use default local path if not specified
+        if not path:
+            path = CATALOG_BASE_PATH
 
-        # Find all .fits files
-        fits_files = []
-        for fits_file in catalog_dir.rglob("*.fits"):
-            relative_path = fits_file.relative_to(catalog_dir)
-            fits_files.append(
-                {
-                    "name": fits_file.name,
-                    "path": str(relative_path),
-                    "size_mb": round(fits_file.stat().st_size / (1024 * 1024), 2),
-                }
-            )
+        storage, resolved_path = get_storage_backend(path)
+        fits_files = storage.list_files(resolved_path, "*.fits")
 
         return json.dumps(
             {
-                "catalog_base_path": CATALOG_BASE_PATH,
+                "catalog_path": resolved_path,
                 "total_catalogs": len(fits_files),
                 "catalogs": sorted(fits_files, key=lambda x: x["name"]),
             },
@@ -87,14 +106,15 @@ def parse_fits_catalog(catalog_path: str) -> str:
     Returns HDU structure, number of objects, fields, and coordinate ranges.
 
     Args:
-        catalog_path: Path to FITS file (absolute or relative to catalog base)
+        catalog_path: Path to FITS file (local, absolute, relative, or s3://)
 
     Returns:
         JSON string with catalog information
     """
     try:
         resolved_path = resolve_catalog_path(catalog_path)
-        with FITSCatalogParser(resolved_path) as parser:
+        storage, _ = get_storage_backend(resolved_path)
+        with FITSCatalogParser(resolved_path, storage=storage) as parser:
             info = parser.get_basic_info()
         return json.dumps(info, indent=2)
     except Exception as e:
@@ -108,14 +128,15 @@ def get_catalog_fields(catalog_path: str) -> str:
     Returns data types, units, and statistics for all columns.
 
     Args:
-        catalog_path: Path to FITS file (absolute or relative to catalog base)
+        catalog_path: Path to FITS file (local, absolute, relative, or s3://)
 
     Returns:
         JSON string with field information
     """
     try:
         resolved_path = resolve_catalog_path(catalog_path)
-        with FITSCatalogParser(resolved_path) as parser:
+        storage, _ = get_storage_backend(resolved_path)
+        with FITSCatalogParser(resolved_path, storage=storage) as parser:
             fields = parser.get_fields()
         return json.dumps(fields, indent=2)
     except Exception as e:
@@ -132,7 +153,7 @@ def get_catalog_objects(
     """Retrieve object data from catalog with pagination.
 
     Args:
-        catalog_path: Path to FITS file (absolute or relative to catalog base)
+        catalog_path: Path to FITS file (local, absolute, relative, or s3://)
         start: Starting row index (default: 0)
         limit: Maximum objects to return (default: 100)
         columns: Column names to include (omit for all)
@@ -142,7 +163,8 @@ def get_catalog_objects(
     """
     try:
         resolved_path = resolve_catalog_path(catalog_path)
-        with FITSCatalogParser(resolved_path) as parser:
+        storage, _ = get_storage_backend(resolved_path)
+        with FITSCatalogParser(resolved_path, storage=storage) as parser:
             objects = parser.get_objects(start=start, limit=limit, columns=columns)
         return json.dumps(objects, indent=2)
     except Exception as e:
@@ -156,14 +178,15 @@ def get_catalog_statistics(catalog_path: str) -> str:
     Returns total objects, fields, and field types.
 
     Args:
-        catalog_path: Path to FITS file (absolute or relative to catalog base)
+        catalog_path: Path to FITS file (local, absolute, relative, or s3://)
 
     Returns:
         JSON string with statistics
     """
     try:
         resolved_path = resolve_catalog_path(catalog_path)
-        with FITSCatalogParser(resolved_path) as parser:
+        storage, _ = get_storage_backend(resolved_path)
+        with FITSCatalogParser(resolved_path, storage=storage) as parser:
             stats = parser.get_statistics()
         return json.dumps(stats, indent=2)
     except Exception as e:

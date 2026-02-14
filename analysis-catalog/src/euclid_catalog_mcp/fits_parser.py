@@ -1,25 +1,41 @@
 """FITS catalog file parser for Euclid mission data."""
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, BinaryIO, Union
 
 import numpy as np
 from astropy.io import fits
 from astropy.table import Table
 
+try:
+    from .storage.base import StorageBackend
+except ImportError:
+    from storage.base import StorageBackend
+
 
 class FITSCatalogParser:
     """Parser for Euclid FITS catalog files."""
 
-    def __init__(self, fits_path: str):
-        """Initialize parser with FITS file path.
+    def __init__(self, fits_path: Union[str, BinaryIO], storage: Optional[StorageBackend] = None):
+        """Initialize parser with FITS file path or file-like object.
 
         Args:
-            fits_path: Path to the FITS file
+            fits_path: Path to FITS file or file-like object
+            storage: Storage backend (for path-based access)
         """
-        self.fits_path = Path(fits_path)
-        if not self.fits_path.exists():
-            raise FileNotFoundError(f"FITS file not found: {fits_path}")
+        self.fits_path = fits_path if isinstance(fits_path, str) else None
+        self.file_obj = fits_path if not isinstance(fits_path, str) else None
+        self.storage = storage
+
+        # Validate file exists if using path with storage
+        if self.fits_path and self.storage:
+            if not self.storage.exists(self.fits_path):
+                raise FileNotFoundError(f"FITS file not found: {fits_path}")
+        elif self.fits_path and not self.storage:
+            # Legacy: direct path without storage backend
+            path = Path(fits_path)
+            if not path.exists():
+                raise FileNotFoundError(f"FITS file not found: {fits_path}")
 
         self.hdul = None
         self.table = None
@@ -35,7 +51,16 @@ class FITSCatalogParser:
 
     def open(self):
         """Open the FITS file."""
-        self.hdul = fits.open(self.fits_path)
+        # Use file object if provided, otherwise open via storage or path
+        if self.file_obj:
+            self.hdul = fits.open(self.file_obj)
+        elif self.storage and self.fits_path:
+            file_obj = self.storage.open(self.fits_path)
+            self.hdul = fits.open(file_obj)
+        else:
+            # Legacy: direct path access
+            self.hdul = fits.open(self.fits_path)
+
         # Find the first table HDU (usually extension 1)
         for hdu in self.hdul:
             if isinstance(hdu, (fits.BinTableHDU, fits.TableHDU)):
@@ -56,7 +81,8 @@ class FITSCatalogParser:
         if not self.hdul:
             raise RuntimeError("FITS file not opened")
 
-        info = {"filename": self.fits_path.name, "num_hdus": len(self.hdul), "hdus": []}
+        filename = self.fits_path if isinstance(self.fits_path, str) else "stream"
+        info = {"filename": filename, "num_hdus": len(self.hdul), "hdus": []}
 
         for i, hdu in enumerate(self.hdul):
             hdu_info = {
