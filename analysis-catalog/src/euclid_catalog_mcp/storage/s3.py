@@ -31,11 +31,18 @@ class S3SeekableStream:
 
     def read(self, size: int = -1) -> bytes:
         """Read bytes from S3 object using Range requests."""
+        # Check if we're at or past EOF
+        if self.position >= self.size:
+            return b""
+
         if size == -1:
             size = self.size - self.position
 
         if size <= 0:
             return b""
+
+        # Don't read past EOF
+        size = min(size, self.size - self.position)
 
         # Check if we need to fetch more data
         buffer_end = self.buffer_start + len(self.buffer)
@@ -43,6 +50,10 @@ class S3SeekableStream:
             # Need to fetch new data
             chunk_size = max(size, 1024 * 1024)  # At least 1MB chunks
             end_byte = min(self.position + chunk_size - 1, self.size - 1)
+
+            # Validate range before making request
+            if self.position > self.size - 1:
+                return b""
 
             response = self.s3_client.get_object(
                 Bucket=self.bucket,

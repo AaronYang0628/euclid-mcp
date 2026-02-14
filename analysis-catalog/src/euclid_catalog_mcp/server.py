@@ -175,11 +175,11 @@ def parse_fits_header_only(catalog_path: str) -> str:
 
     This tool reads ONLY the FITS header portion which contains:
     - HDU structure and types
-    - Column names, data types, and units
+    - Column names, data types, formats, and units
     - Number of rows (from NAXIS2 header keyword)
     - All metadata without touching actual data
 
-    Perfect for: Initial exploration, schema inspection, large files on S3
+    Perfect for: Initial exploration, schema inspection, understanding catalog structure
 
     Args:
         catalog_path: Path to FITS file
@@ -187,7 +187,14 @@ def parse_fits_header_only(catalog_path: str) -> str:
                      Local: absolute path or relative to CATALOG_BASE_PATH
 
     Returns:
-        JSON with HDU structure, column definitions, row counts, and metadata
+        JSON with:
+        - filename: Path to the file
+        - num_hdus: Number of HDUs
+        - hdus: List of HDU information including:
+          - index, name, type
+          - num_rows: Total number of rows (for table HDUs)
+          - num_columns: Total number of columns
+          - columns: List of column definitions with name, format, unit
     """
     try:
         import io
@@ -320,40 +327,6 @@ def get_catalog_objects(
         with FITSCatalogParser(resolved_path, storage=storage) as parser:
             objects = parser.get_objects(start=start, limit=limit, columns=columns)
         return json.dumps(objects, indent=2)
-    except Exception as e:
-        return json.dumps({"error": str(e)})
-
-
-@mcp.tool()
-def get_catalog_statistics(catalog_path: str) -> str:
-    """Get statistical summary of catalog structure - minimal data download.
-
-    ✅ LIGHTWEIGHT: Only reads metadata, minimal data access.
-
-    Use this tool when you need:
-    - Total object/row count
-    - Total field/column count
-    - List of all field names
-    - Count of numeric vs non-numeric fields
-    - Quick overview without detailed statistics
-
-    This provides a high-level summary without computing per-field statistics.
-    For detailed field statistics, use get_catalog_fields instead.
-
-    Args:
-        catalog_path: Path to FITS file
-                     S3: s3://bucket-name/path/to/file.fits
-                     Local: absolute path or relative to CATALOG_BASE_PATH
-
-    Returns:
-        JSON with catalog statistics: total objects, fields, field names, and type counts
-    """
-    try:
-        resolved_path = resolve_catalog_path(catalog_path)
-        storage, _ = get_storage_backend(resolved_path)
-        with FITSCatalogParser(resolved_path, storage=storage) as parser:
-            stats = parser.get_statistics()
-        return json.dumps(stats, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)})
 

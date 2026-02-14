@@ -4,11 +4,11 @@ MCP server for parsing and analyzing Euclid mission catalog FITS files.
 
 ## Features
 
-- Parse FITS catalog files
-- Extract field information (column names, data types, units)
-- Retrieve object/source information
-- Get statistical summaries of catalog data
-- Query specific objects by index or criteria
+- Parse FITS catalog files from local storage or S3
+- Optimized for large S3 files with header-only parsing (no download needed)
+- Extract field information (column names, data types, units, statistics)
+- Retrieve object/source data with pagination
+- Support for streaming access to minimize bandwidth usage
 
 ## Installation
 
@@ -42,10 +42,17 @@ DANGEROUSLY_OMIT_AUTH=true  npx @modelcontextprotocol/inspector python -m euclid
 
 ### Available Tools
 
-1. **parse_fits_catalog** - Parse a FITS catalog file and return basic information
-2. **get_catalog_fields** - Get detailed field/column information
-3. **get_catalog_objects** - Retrieve object data with optional filtering
-4. **get_catalog_statistics** - Get statistical summary of catalog data
+1. **list_catalogs** - List FITS files in a directory (local or S3)
+2. **parse_fits_header_only** - ⚡ Fast header parsing without downloading data (recommended for S3)
+3. **get_catalog_info_with_stats** - Get catalog info with coordinate ranges (downloads data)
+4. **get_catalog_fields** - Get detailed field statistics (downloads data)
+5. **get_catalog_objects** - Retrieve actual row data with pagination
+
+### Tool Selection Guide
+
+- **Just browsing?** Use `list_catalogs` → `parse_fits_header_only`
+- **Need data statistics?** Use `get_catalog_fields` or `get_catalog_info_with_stats`
+- **Need actual data?** Use `get_catalog_objects`
 
 ## Requirements
 
