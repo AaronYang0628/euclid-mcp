@@ -32,6 +32,8 @@ spec:
           envFrom:
             - configMapRef:
                 name: euclid-catalog-mcp-config
+            - secretRef:
+                name: euclid-catalog-mcp-secret
           resources:
             requests:
               memory: "512Mi"
@@ -59,5 +61,6 @@ spec:
       volumes:
         - name: catalog-data
           persistentVolumeClaim:
+          
             claimName: euclid-catalog-pvc
       restartPolicy: Always
