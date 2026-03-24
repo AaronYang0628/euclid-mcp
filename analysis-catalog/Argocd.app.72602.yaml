@@ -6,9 +6,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'https://gitlab.zhejianglab.com/AaronYang/euclid-mcp.git'
+    repoURL: 'git@github.com:AaronYang0628/euclid-mcp.git'
     targetRevision: main
-    path: analysis-catalog/manifests
+    path: analysis-catalog/overlays/env-72602
   syncPolicy:
     automated:
       prune: true

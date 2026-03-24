@@ -1,0 +1,20 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: euclid-catalog-mcp
+spec:
+  rules:
+    - host: catalog.euclid.72602.online
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: euclid-catalog-mcp
+                port:
+                  number: 8000
+  tls:
+    - hosts:
+        - catalog.euclid.72602.online
+      secretName: euclid-catalog-tls
