@@ -4,3 +4,4 @@ metadata:
   name: euclid-catalog-pv
 spec:
   storageClassName: local-path
+  nodeAffinity: null
