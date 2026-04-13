@@ -47,6 +47,7 @@ DANGEROUSLY_OMIT_AUTH=true  npx @modelcontextprotocol/inspector python -m euclid
 3. **get_catalog_info_with_stats** - Get catalog info with coordinate ranges (downloads data)
 4. **get_catalog_fields** - Get detailed field statistics (downloads data)
 5. **get_catalog_objects** - Retrieve actual row data with pagination
+6. **resolve_tile_id** - Resolve tile id by RA/DEC (mock deterministic mapping for now)
 
 ### Tool Selection Guide
 
@@ -63,5 +64,24 @@ DANGEROUSLY_OMIT_AUTH=true  npx @modelcontextprotocol/inspector python -m euclid
 ## Building the Docker Image
 ```bash
 cd /workspaces/euclid-mcp/analysis-catalog
-podman build -t harbor.zhejianglab.com/ayb-dev/euclid-catalog-mcp:latest .
+podman build -t harbor.zhejianglab.com/ay-dev/euclid-catalog-mcp:latest .
+```
+
+## Release Automation
+
+Use release script for build/push/overlay update/Argo CD sync:
+
+```bash
+cd /workspaces/euclid-mcp
+analysis-catalog/ops/release.sh --env env-zjlab
+```
+
+Detailed guide: `analysis-catalog/docs/release-ops.md`
+
+Make targets:
+
+```bash
+cd /workspaces/euclid-mcp/analysis-catalog
+make help
+make release-zjlab
 ```

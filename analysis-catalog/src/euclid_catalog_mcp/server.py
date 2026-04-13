@@ -27,11 +27,13 @@ except ImportError:
 try:
     from .fits_parser import FITSCatalogParser
     from .storage import LocalStorage, S3Storage
+    from .tile_index import resolve_tile_id_mock
 except ImportError:
     # Add parent directory to path for direct execution
     sys.path.insert(0, str(Path(__file__).parent))
     from fits_parser import FITSCatalogParser
     from storage import LocalStorage, S3Storage
+    from tile_index import resolve_tile_id_mock
 
 # Get catalog base path from environment variable
 CATALOG_BASE_PATH = os.getenv("CATALOG_DATA_PATH", "/data/catalogs")
@@ -327,6 +329,40 @@ def get_catalog_objects(
         with FITSCatalogParser(resolved_path, storage=storage) as parser:
             objects = parser.get_objects(start=start, limit=limit, columns=columns)
         return json.dumps(objects, indent=2)
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+
+
+@mcp.tool()
+def resolve_tile_id(ra: float, dec: float) -> str:
+    """Resolve Euclid tile ID by sky coordinate.
+
+    Current behavior: deterministic mock mapping for workflow continuity.
+    This allows downstream pipelines to carry a stable tile_id before official
+    tile boundary lookup is integrated.
+
+    Args:
+        ra: Right ascension in degrees, range [0, 360)
+        dec: Declination in degrees, range [-90, 90]
+
+    Returns:
+        JSON string with tile_id and metadata
+    """
+    try:
+        result = resolve_tile_id_mock(ra=float(ra), dec=float(dec))
+        return json.dumps(
+            {
+                "ra": float(ra),
+                "dec": float(dec),
+                "tile_id": result.tile_id,
+                "mapping": {
+                    "method": result.method,
+                    "mode": "mock",
+                    "confidence": result.confidence,
+                },
+            },
+            indent=2,
+        )
     except Exception as e:
         return json.dumps({"error": str(e)})
 

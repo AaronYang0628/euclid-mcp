@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: euclid-catalog-mcp
-          image: harbor.zhejianglab.com/ayb-dev/euclid-catalog-mcp:v20260226
+          image: harbor.zhejianglab.com/ay-dev/euclid-catalog-mcp:v20260226
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -61,6 +61,5 @@ spec:
       volumes:
         - name: catalog-data
           persistentVolumeClaim:
-          
             claimName: euclid-catalog-pvc
       restartPolicy: Always
