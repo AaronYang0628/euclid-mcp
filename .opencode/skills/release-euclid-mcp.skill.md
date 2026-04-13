@@ -11,10 +11,17 @@ Standardized release workflow for `analysis-catalog` (euclid-catalog MCP) using 
 
 ## Commands
 
-From repo root (`euclid-mcp`):
+From `analysis-catalog` (recommended):
 
 ```bash
-analysis-catalog/ops/release.sh --env env-zjlab
+cd analysis-catalog
+make release-zjlab
+```
+
+Or from repo root (`euclid-mcp`):
+
+```bash
+analysis-catalog/ops/release.sh --env env-zjlab --commit --push-git
 ```
 
 With commit and push:

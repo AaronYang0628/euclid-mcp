@@ -1,14 +1,17 @@
-"""Tile index resolver for RA/DEC -> tile_id mapping.
+"""Tile index resolver utilities.
 
-Current implementation provides a deterministic mock resolver so downstream
-workflows can proceed before official tile boundary data is integrated.
+Resolution priority (when catalog path is available):
+1) filename pattern extraction
+2) FITS header keyword extraction
+3) deterministic RA/DEC mock mapping (fallback)
 """
 
 from __future__ import annotations
 
 import hashlib
+import re
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, Mapping, Optional
 
 
 @dataclass(frozen=True)
@@ -18,13 +21,114 @@ class TileResolveResult:
     tile_id: str
     method: str
     confidence: float
+    detail: str | None = None
 
     def to_dict(self) -> Dict[str, object]:
         return {
             "tile_id": self.tile_id,
             "method": self.method,
             "confidence": self.confidence,
+            "detail": self.detail,
         }
+
+
+_TILE_TOKEN_RE = re.compile(r"TILE(?P<tile>\d{6,})(?:-[A-Za-z0-9]+)?", re.IGNORECASE)
+_CATALOG_TOKEN_RE = re.compile(r"MER_FINAL_CATALOG_(?P<tile>\d{6,})", re.IGNORECASE)
+
+
+def _extract_numeric_tile_token(value: object) -> Optional[str]:
+    if value is None:
+        return None
+
+    text = str(value).strip()
+    if not text:
+        return None
+
+    # Most reliable: TILE123456789 style token
+    m = _TILE_TOKEN_RE.search(text)
+    if m:
+        return m.group("tile")
+
+    # If value is a bare numeric tile id
+    if text.isdigit() and len(text) >= 6:
+        return text
+
+    # Sometimes header values include surrounding text
+    num = re.search(r"(\d{6,})", text)
+    if num:
+        return num.group(1)
+
+    return None
+
+
+def resolve_tile_id_from_filename(path_like: str) -> Optional[TileResolveResult]:
+    """Extract tile id from Euclid catalog filename.
+
+    Supports patterns like:
+    - EUC_MER_BGSUB-MOSAIC-..._TILE102018211-CC66F6_...fits
+    - ...MER_FINAL_CATALOG_102018211_...
+    """
+
+    filename = path_like.rsplit("/", 1)[-1]
+
+    tile = _extract_numeric_tile_token(filename)
+    if tile:
+        return TileResolveResult(
+            tile_id=tile,
+            method="filename_tile_token",
+            confidence=1.0,
+            detail=filename,
+        )
+
+    m = _CATALOG_TOKEN_RE.search(filename)
+    if m:
+        return TileResolveResult(
+            tile_id=m.group("tile"),
+            method="filename_catalog_token",
+            confidence=0.9,
+            detail=filename,
+        )
+
+    return None
+
+
+def resolve_tile_id_from_header(header: Mapping[str, object]) -> Optional[TileResolveResult]:
+    """Extract tile id from FITS header mapping."""
+
+    key_candidates = [
+        "TILEID",
+        "TILE_ID",
+        "TILEINDEX",
+        "TILE_INDEX",
+        "TILE",
+        "TILENAME",
+        "TILE_NAME",
+    ]
+
+    # Prefer canonical keywords
+    for key in key_candidates:
+        if key in header:
+            tile = _extract_numeric_tile_token(header.get(key))
+            if tile:
+                return TileResolveResult(
+                    tile_id=tile,
+                    method=f"fits_header_keyword:{key}",
+                    confidence=0.95,
+                    detail=str(header.get(key)),
+                )
+
+    # Fallback: scan all header values for TILE token
+    for _, value in header.items():
+        tile = _extract_numeric_tile_token(value)
+        if tile:
+            return TileResolveResult(
+                tile_id=tile,
+                method="fits_header_scan",
+                confidence=0.7,
+                detail=str(value),
+            )
+
+    return None
 
 
 def _validate_coord(ra: float, dec: float) -> None:

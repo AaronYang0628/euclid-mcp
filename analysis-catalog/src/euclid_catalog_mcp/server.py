@@ -27,13 +27,21 @@ except ImportError:
 try:
     from .fits_parser import FITSCatalogParser
     from .storage import LocalStorage, S3Storage
-    from .tile_index import resolve_tile_id_mock
+    from .tile_index import (
+        resolve_tile_id_from_filename,
+        resolve_tile_id_from_header,
+        resolve_tile_id_mock,
+    )
 except ImportError:
     # Add parent directory to path for direct execution
     sys.path.insert(0, str(Path(__file__).parent))
     from fits_parser import FITSCatalogParser
     from storage import LocalStorage, S3Storage
-    from tile_index import resolve_tile_id_mock
+    from tile_index import (
+        resolve_tile_id_from_filename,
+        resolve_tile_id_from_header,
+        resolve_tile_id_mock,
+    )
 
 # Get catalog base path from environment variable
 CATALOG_BASE_PATH = os.getenv("CATALOG_DATA_PATH", "/data/catalogs")
@@ -334,31 +342,77 @@ def get_catalog_objects(
 
 
 @mcp.tool()
-def resolve_tile_id(ra: float, dec: float) -> str:
+def resolve_tile_id(ra: float, dec: float, catalog_path: str = "") -> str:
     """Resolve Euclid tile ID by sky coordinate.
 
-    Current behavior: deterministic mock mapping for workflow continuity.
-    This allows downstream pipelines to carry a stable tile_id before official
-    tile boundary lookup is integrated.
+    Resolution strategy:
+    1) If catalog_path provided: parse tile from filename
+    2) If not found: inspect FITS header keywords
+    3) If still not found: deterministic RA/DEC mock mapping
 
     Args:
         ra: Right ascension in degrees, range [0, 360)
         dec: Declination in degrees, range [-90, 90]
+        catalog_path: Optional local or s3 path to Euclid FITS catalog
 
     Returns:
         JSON string with tile_id and metadata
     """
     try:
-        result = resolve_tile_id_mock(ra=float(ra), dec=float(dec))
+        resolved_path = resolve_catalog_path(catalog_path) if catalog_path else ""
+
+        result = None
+
+        # 1) Filename extraction (fast, no file read)
+        if resolved_path:
+            result = resolve_tile_id_from_filename(resolved_path)
+
+        # 2) Header extraction if filename failed and path is available
+        if result is None and resolved_path:
+            try:
+                from astropy.io import fits
+                import io
+
+                storage, _ = get_storage_backend(resolved_path)
+                if resolved_path.startswith("s3://"):
+                    header_data = storage.read_fits_header_only(resolved_path)
+                    with fits.open(io.BytesIO(header_data)) as hdul:
+                        header_result = None
+                        for hdu in hdul:
+                            header_result = resolve_tile_id_from_header(dict(hdu.header))
+                            if header_result:
+                                break
+                        result = header_result
+                else:
+                    with storage.open(resolved_path) as fobj:
+                        with fits.open(fobj) as hdul:
+                            header_result = None
+                            for hdu in hdul:
+                                header_result = resolve_tile_id_from_header(dict(hdu.header))
+                                if header_result:
+                                    break
+                            result = header_result
+            except Exception:
+                # Ignore header parse errors and continue to mock fallback
+                pass
+
+        # 3) Deterministic mock fallback
+        if result is None:
+            result = resolve_tile_id_mock(ra=float(ra), dec=float(dec))
+
         return json.dumps(
             {
                 "ra": float(ra),
                 "dec": float(dec),
                 "tile_id": result.tile_id,
+                "catalog_path": resolved_path if resolved_path else None,
                 "mapping": {
                     "method": result.method,
-                    "mode": "mock",
+                    "mode": "mock"
+                    if result.method.startswith("mock_")
+                    else "extracted",
                     "confidence": result.confidence,
+                    "detail": result.detail,
                 },
             },
             indent=2,

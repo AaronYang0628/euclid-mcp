@@ -47,7 +47,7 @@ DANGEROUSLY_OMIT_AUTH=true  npx @modelcontextprotocol/inspector python -m euclid
 3. **get_catalog_info_with_stats** - Get catalog info with coordinate ranges (downloads data)
 4. **get_catalog_fields** - Get detailed field statistics (downloads data)
 5. **get_catalog_objects** - Retrieve actual row data with pagination
-6. **resolve_tile_id** - Resolve tile id by RA/DEC (mock deterministic mapping for now)
+6. **resolve_tile_id** - Resolve tile id by RA/DEC, optionally using catalog path (filename/header first, mock fallback)
 
 ### Tool Selection Guide
 
