@@ -1,0 +1,10 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: euclid-catalog-mcp
+spec:
+  template:
+    spec:
+      containers:
+        - name: euclid-catalog-mcp
+          image: harbor.zhejianglab.com/ay-dev/euclid-catalog-mcp:v20260413110808-037c1c1

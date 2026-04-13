@@ -1,5 +1,0 @@
-{
-  "euclid_catalog_path": "/path/to/euclid_catalog.fits",
-  "desi_catalog_path": "/path/to/desi_sweep_catalog.fits",
-  "match_radius_arcsec": 1.0
-}
