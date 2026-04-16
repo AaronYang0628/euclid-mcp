@@ -8,7 +8,8 @@
 - ✅ 支持多种依赖管理工具（pip, poetry, pipenv, uv）
 - ✅ 预配置 VS Code Python 开发环境
 - ✅ 包含常用开发工具（black, ruff, mypy, pytest等）
-- ✅ 预装 Claude Code CLI
+- ✅ 预装 OpenCode CLI / Claude Code CLI / MCP Inspector
+- ✅ 预装 `kubectl`（可直接连接本地/远程 Kubernetes 集群）
 - ✅ Git 和 SSH 配置
 
 ## 使用方法
@@ -96,6 +97,40 @@ claude --help
 cd project1
 claude
 ```
+
+### OpenCode 命令
+
+```bash
+# 检查版本
+opencode --version
+
+# 建议在项目根目录启动
+cd /workspace/euclid-mcp
+
+# 查看配置
+opencode debug config
+
+# 查看 MCP
+opencode mcp list
+
+# 启动 Web
+opencode web --port 7788
+```
+
+### Kubernetes 命令
+
+```bash
+# 检查 kubectl 是否可用
+kubectl version --client
+
+# 查看当前上下文
+kubectl config current-context
+```
+
+说明：
+
+- `AI_MODEL_KEY` 通过 devcontainer `containerEnv` 预留，重建后请在容器内设置真实值。
+- 若内网证书链不完整，已默认设置 `NODE_TLS_REJECT_UNAUTHORIZED=0` 便于本地调试。
 
 ### Pyenv 命令
 

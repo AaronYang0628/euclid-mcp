@@ -3,8 +3,11 @@ SHELL := /usr/bin/env bash
 ENV ?= env-zjlab
 TAG ?=
 ARGOCD_APP ?= euclid-catalog-mcp
+CLIENT_PORT ?= 6275
+SERVER_PORT ?= 6278
+MCP_HTTP_PORT ?= 8000
 
-.PHONY: help release release-zjlab release-72602 tag-only sync status
+.PHONY: help release release-zjlab release-72602 tag-only sync status inspect-http inspect-stdio
 
 help:
 	@printf "%s\n" \
@@ -13,6 +16,10 @@ help:
 	  "  make release-zjlab [TAG=...]                      Release to env-zjlab" \
 	  "  make release-72602 [TAG=...]                      Release to env-72602" \
 	  "  make tag-only ENV=env-zjlab TAG=v...             Update overlay tag only" \
+	  "  make inspect-http [CLIENT_PORT=6275 SERVER_PORT=6278 MCP_HTTP_PORT=8000]" \
+	  "                                                   Start streamable-http server + inspector" \
+	  "  make inspect-stdio [CLIENT_PORT=6275 SERVER_PORT=6278]" \
+	  "                                                   Start inspector in stdio mode" \
 	  "  make sync [ARGOCD_APP=euclid-catalog-mcp]        Trigger Argo CD sync" \
 	  "  make status [ARGOCD_APP=euclid-catalog-mcp]      Show Argo CD app status"
 
@@ -44,3 +51,9 @@ status:
 	else \
 	  kubectl -n argocd get application "$(ARGOCD_APP)" -o wide; \
 	fi
+
+inspect-http:
+	@CLIENT_PORT="$(CLIENT_PORT)" SERVER_PORT="$(SERVER_PORT)" MCP_HTTP_PORT="$(MCP_HTTP_PORT)" ./ops/inspect-http.sh
+
+inspect-stdio:
+	@CLIENT_PORT="$(CLIENT_PORT)" SERVER_PORT="$(SERVER_PORT)" ALLOWED_ORIGINS="http://127.0.0.1:$(CLIENT_PORT),http://localhost:$(CLIENT_PORT)" DANGEROUSLY_OMIT_AUTH=true npx @modelcontextprotocol/inspector ./.venv/bin/python -m euclid_catalog_mcp.server --stdio

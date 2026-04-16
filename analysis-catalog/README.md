@@ -1,87 +1,100 @@
 # Euclid Catalog MCP Server
 
-MCP server for parsing and analyzing Euclid mission catalog FITS files.
+面向使用者的最简使用说明（开发细节见 `UPDATE.md`）。
 
-## Features
-
-- Parse FITS catalog files from local storage or S3
-- Optimized for large S3 files with header-only parsing (no download needed)
-- Extract field information (column names, data types, units, statistics)
-- Retrieve object/source data with pagination
-- Support for streaming access to minimize bandwidth usage
-
-## Installation
+## 1) 快速启动（推荐）
 
 ```bash
-cd /workspaces/euclid-mcp/analysis-catalog && pip install -e .
+cd /workspaces/euclid-mcp/analysis-catalog
+make inspect-http
 ```
 
-## Usage
+启动后在浏览器打开：`http://127.0.0.1:6275`
 
-### As MCP Server
+Inspector 中填写：
 
-Add to your Claude Desktop configuration:
+- Transport: `streamable-http`
+- URL: `http://127.0.0.1:8000/mcp`
+- Proxy Address: `http://127.0.0.1:6278`
+
+## 2) 可选自定义端口
+
+```bash
+cd /workspaces/euclid-mcp/analysis-catalog
+make inspect-http CLIENT_PORT=6395 SERVER_PORT=6398 MCP_HTTP_PORT=8010
+```
+
+## 3) 常用工具
+
+- `list_catalogs`: 列出目录中的 FITS catalog
+- `parse_fits_header_only`: 快速查看 FITS 头（推荐先用）
+- `get_catalog_info_with_stats`: 读取数据并给出范围统计
+- `get_catalog_fields`: 字段统计信息
+- `get_catalog_objects`: 按分页读取对象行数据（`columns` 可选；不传返回全部字段，传入则只返回指定字段）
+- `resolve_tile_id`: 优先从 catalog 路径/头提取 tile，提取失败时回退到 RA/DEC 数字 mock
+
+## 4) `resolve_tile_id` 示例
+
+只给路径（推荐）：
+
+```json
+{
+  "catalog_path": "s3://bucket/path/file.fits"
+}
+```
+
+只给坐标（mock fallback）：
+
+```json
+{
+  "ra": 10.0,
+  "dec": 20.0
+}
+```
+
+## 5) 连接失败时先检查
+
+- 端口是否转发：`CLIENT_PORT` 和 `SERVER_PORT` 都要转发
+- Proxy Address 是否与 `SERVER_PORT` 一致
+- 有旧进程占端口时，先重启命令（脚本会自动清理常见旧进程）
+
+## 6) `get_catalog_objects` 字段筛选示例
+
+返回全部字段（不传 `columns`）：
+
+```json
+{
+  "catalog_path": "s3://bucket/path/file.fits",
+  "start": 0,
+  "limit": 5
+}
+```
+
+只返回指定字段（传 `columns`）：
+
+```json
+{
+  "catalog_path": "s3://bucket/path/file.fits",
+  "start": 0,
+  "limit": 5,
+  "columns": ["OBJECT_ID", "RIGHT_ASCENSION", "DECLINATION"]
+}
+```
+
+## 7) 作为 MCP Server 接入
 
 ```json
 {
   "mcpServers": {
     "euclid-catalog": {
-      "command": "python",
+      "command": "python3",
       "args": ["-m", "euclid_catalog_mcp.server"]
     }
   }
 }
 ```
 
+## 8) 更多文档
 
-```shell
-python -m euclid_catalog_mcp.server
-&&
-DANGEROUSLY_OMIT_AUTH=true  npx @modelcontextprotocol/inspector python -m euclid_catalog_mcp.server
-```
-
-### Available Tools
-
-1. **list_catalogs** - List FITS files in a directory (local or S3)
-2. **parse_fits_header_only** - ⚡ Fast header parsing without downloading data (recommended for S3)
-3. **get_catalog_info_with_stats** - Get catalog info with coordinate ranges (downloads data)
-4. **get_catalog_fields** - Get detailed field statistics (downloads data)
-5. **get_catalog_objects** - Retrieve actual row data with pagination
-6. **resolve_tile_id** - Resolve tile id by RA/DEC, optionally using catalog path (filename/header first, mock fallback)
-
-### Tool Selection Guide
-
-- **Just browsing?** Use `list_catalogs` → `parse_fits_header_only`
-- **Need data statistics?** Use `get_catalog_fields` or `get_catalog_info_with_stats`
-- **Need actual data?** Use `get_catalog_objects`
-
-## Requirements
-
-- Python >= 3.10
-- astropy >= 6.0.0
-- mcp >= 1.0.0
-
-## Building the Docker Image
-```bash
-cd /workspaces/euclid-mcp/analysis-catalog
-podman build -t harbor.zhejianglab.com/ay-dev/euclid-catalog-mcp:latest .
-```
-
-## Release Automation
-
-Use release script for build/push/overlay update/Argo CD sync:
-
-```bash
-cd /workspaces/euclid-mcp
-analysis-catalog/ops/release.sh --env env-zjlab
-```
-
-Detailed guide: `analysis-catalog/docs/release-ops.md`
-
-Make targets:
-
-```bash
-cd /workspaces/euclid-mcp/analysis-catalog
-make help
-make release-zjlab
-```
+- 开发者文档：`UPDATE.md`
+- 发布与部署：`docs/release-ops.md`

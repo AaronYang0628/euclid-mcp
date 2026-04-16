@@ -71,10 +71,10 @@ def resolve_tile_id_from_filename(path_like: str) -> Optional[TileResolveResult]
 
     filename = path_like.rsplit("/", 1)[-1]
 
-    tile = _extract_numeric_tile_token(filename)
-    if tile:
+    m = _TILE_TOKEN_RE.search(filename)
+    if m:
         return TileResolveResult(
-            tile_id=tile,
+            tile_id=m.group("tile"),
             method="filename_tile_token",
             confidence=1.0,
             detail=filename,
@@ -89,10 +89,22 @@ def resolve_tile_id_from_filename(path_like: str) -> Optional[TileResolveResult]
             detail=filename,
         )
 
+    # Conservative fallback: whole basename is numeric tile id
+    basename = filename.rsplit(".", 1)[0]
+    if basename.isdigit() and len(basename) >= 6:
+        return TileResolveResult(
+            tile_id=basename,
+            method="filename_numeric_basename",
+            confidence=0.6,
+            detail=filename,
+        )
+
     return None
 
 
-def resolve_tile_id_from_header(header: Mapping[str, object]) -> Optional[TileResolveResult]:
+def resolve_tile_id_from_header(
+    header: Mapping[str, object],
+) -> Optional[TileResolveResult]:
     """Extract tile id from FITS header mapping."""
 
     key_candidates = [
@@ -138,21 +150,25 @@ def _validate_coord(ra: float, dec: float) -> None:
         raise ValueError(f"DEC must be in [-90, 90]. got={dec}")
 
 
-def resolve_tile_id_mock(ra: float, dec: float, prefix: str = "EUC_TILE") -> TileResolveResult:
-    """Resolve a deterministic mock tile id from RA/DEC.
+def resolve_tile_id_mock(ra: float, dec: float) -> TileResolveResult:
+    """Resolve a deterministic numeric mock tile id from RA/DEC.
 
-    The output is stable for identical coordinates and safe to use as a
-    placeholder key in downstream pipelines.
+    The output is stable for identical coordinates and shaped like Euclid tile
+    IDs (9-digit numeric string), so downstream systems can treat it uniformly
+    with extracted tile ids.
     """
 
     _validate_coord(float(ra), float(dec))
 
     payload = f"{ra:.8f},{dec:.8f}".encode("utf-8")
-    digest = hashlib.sha1(payload).hexdigest().upper()[:10]
-    tile_id = f"{prefix}_{digest}"
+    digest = hashlib.sha1(payload).hexdigest()
+
+    # Map hash deterministically into a 9-digit numeric tile id range.
+    tile_num = 100000000 + (int(digest[:12], 16) % 900000000)
+    tile_id = str(tile_num)
 
     return TileResolveResult(
         tile_id=tile_id,
-        method="mock_sha1_radec",
+        method="mock_numeric_sha1_radec",
         confidence=0.0,
     )

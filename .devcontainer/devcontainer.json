@@ -36,10 +36,16 @@
       }
     }
   },
+  "containerEnv": {
+    "AI_MODEL_KEY": "",
+    "NODE_TLS_REJECT_UNAUTHORIZED": "0"
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
   "remoteUser": "root",
   "mounts": [
     "source=${localEnv:HOME}/.ssh,target=/root/.ssh,readonly,type=bind,consistency=cached",
-    "source=/home/aaron/Downloads/upload,target=/data/catalogs,type=bind"
+    "source=/home/aaron/Downloads/upload,target=/data/catalogs,type=bind",
+    "source=/home/aaron/.kube/config,target=/root/.kube/config,type=bind"
   ],
   "forwardPorts": [],
   "runArgs": [

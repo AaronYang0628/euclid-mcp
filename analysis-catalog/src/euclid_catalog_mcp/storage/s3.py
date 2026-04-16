@@ -2,6 +2,7 @@
 
 import io
 import os
+import sys
 import tempfile
 from typing import BinaryIO, List, Dict, Any
 from urllib.parse import urlparse
@@ -58,14 +59,14 @@ class S3SeekableStream:
             response = self.s3_client.get_object(
                 Bucket=self.bucket,
                 Key=self.key,
-                Range=f"bytes={self.position}-{end_byte}"
+                Range=f"bytes={self.position}-{end_byte}",
             )
             self.buffer = response["Body"].read()
             self.buffer_start = self.position
 
         # Read from buffer
         offset = self.position - self.buffer_start
-        data = self.buffer[offset:offset + size]
+        data = self.buffer[offset : offset + size]
         self.position += len(data)
         return data
 
@@ -101,8 +102,16 @@ class S3Storage(StorageBackend):
 
             # Read S3 configuration from environment variables
             endpoint_url = os.getenv("AWS_ENDPOINT_URL")
-            verify_ssl = os.getenv("AWS_VERIFY_SSL", "true").lower() in ("true", "1", "yes")
-            use_streaming = os.getenv("S3_USE_STREAMING", "true").lower() in ("true", "1", "yes")
+            verify_ssl = os.getenv("AWS_VERIFY_SSL", "true").lower() in (
+                "true",
+                "1",
+                "yes",
+            )
+            use_streaming = os.getenv("S3_USE_STREAMING", "true").lower() in (
+                "true",
+                "1",
+                "yes",
+            )
 
             # Create S3 client with optional endpoint URL and SSL verification
             client_kwargs = {}
@@ -161,11 +170,14 @@ class S3Storage(StorageBackend):
             size_mb = file_size / (1024 * 1024)
 
             if self.use_streaming:
-                print(f"Opening S3 file as stream ({size_mb:.2f} MB) - no download needed")
+                print(
+                    f"Opening S3 file as stream ({size_mb:.2f} MB) - no download needed",
+                    file=sys.stderr,
+                )
                 return S3SeekableStream(self.s3_client, bucket, key, file_size)
             else:
                 # Fallback: download entire file
-                print(f"Downloading entire file ({size_mb:.2f} MB)")
+                print(f"Downloading entire file ({size_mb:.2f} MB)", file=sys.stderr)
                 response = self.s3_client.get_object(Bucket=bucket, Key=key)
                 content = response["Body"].read()
                 return io.BytesIO(content)
@@ -190,11 +202,13 @@ class S3Storage(StorageBackend):
                 for obj in page["Contents"]:
                     key = obj["Key"]
                     if key.endswith(suffix):
-                        files.append({
-                            "name": os.path.basename(key),
-                            "path": key,
-                            "size_mb": round(obj["Size"] / (1024 * 1024), 2),
-                        })
+                        files.append(
+                            {
+                                "name": os.path.basename(key),
+                                "path": key,
+                                "size_mb": round(obj["Size"] / (1024 * 1024), 2),
+                            }
+                        )
         except Exception as e:
             raise RuntimeError(f"Failed to list S3 objects: {e}")
 
@@ -210,7 +224,9 @@ class S3Storage(StorageBackend):
         except Exception as e:
             raise FileNotFoundError(f"Failed to get S3 object size {path}: {e}")
 
-    def read_fits_header_only(self, path: str, max_header_size: int = 10 * 1024 * 1024) -> bytes:
+    def read_fits_header_only(
+        self, path: str, max_header_size: int = 10 * 1024 * 1024
+    ) -> bytes:
         """Read only the header portion of a FITS file from S3.
 
         FITS headers are ASCII text with 80-byte records. This method reads
@@ -235,12 +251,13 @@ class S3Storage(StorageBackend):
             read_size = min(max_header_size, file_size)
             read_mb = read_size / (1024 * 1024)
 
-            print(f"Reading FITS header from S3 ({read_mb:.2f} MB of {size_mb:.2f} MB total)")
+            print(
+                f"Reading FITS header from S3 ({read_mb:.2f} MB of {size_mb:.2f} MB total)",
+                file=sys.stderr,
+            )
 
             response = self.s3_client.get_object(
-                Bucket=bucket,
-                Key=key,
-                Range=f"bytes=0-{read_size - 1}"
+                Bucket=bucket, Key=key, Range=f"bytes=0-{read_size - 1}"
             )
             return response["Body"].read()
 

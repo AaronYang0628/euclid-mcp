@@ -7,4 +7,4 @@ spec:
     spec:
       containers:
         - name: euclid-catalog-mcp
-          image: harbor.zhejianglab.com/ay-dev/euclid-catalog-mcp:v20260413134705-47d1762
+          image: harbor.zhejianglab.com/ay-dev/euclid-catalog-mcp:v20260413154758-592a605

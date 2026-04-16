@@ -4,6 +4,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import Optional
 
 from fastmcp import FastMCP
 
@@ -17,11 +18,11 @@ try:
     env_path = Path(__file__).parent.parent.parent / ".env"
     if env_path.exists():
         load_dotenv(env_path)
-        print(f"Loaded environment from: {env_path}")
+        print(f"Loaded environment from: {env_path}", file=sys.stderr)
     else:
-        print(f"No .env file found at: {env_path}")
+        print(f"No .env file found at: {env_path}", file=sys.stderr)
 except ImportError:
-    print("python-dotenv not installed, skipping .env file loading")
+    print("python-dotenv not installed, skipping .env file loading", file=sys.stderr)
 
 # Handle both relative and absolute imports
 try:
@@ -222,18 +223,14 @@ def parse_fits_header_only(catalog_path: str) -> str:
             file_obj = storage.open(resolved_path)
             hdul = fits.open(file_obj)
 
-        info = {
-            "filename": resolved_path,
-            "num_hdus": len(hdul),
-            "hdus": []
-        }
+        info = {"filename": resolved_path, "num_hdus": len(hdul), "hdus": []}
 
         for i, hdu in enumerate(hdul):
             hdu_info = {
                 "index": i,
                 "name": hdu.name,
                 "type": type(hdu).__name__,
-                "header_cards": len(hdu.header)
+                "header_cards": len(hdu.header),
             }
 
             # Get column information from table HDUs
@@ -314,10 +311,16 @@ def get_catalog_objects(
     - Actual data values from catalog rows
     - Sample data for inspection
     - Specific objects by row index
-    - Subset of columns to reduce data transfer
+    - Only specific fields/columns from each row
 
     Pagination helps manage large catalogs efficiently. For S3 files, uses
     streaming to download only the requested rows when possible.
+
+    Field selection behavior (important):
+    - If `columns` is omitted or null, returns all columns
+    - If `columns` is provided, returns only those columns
+    - `columns` is exactly the list of field names the user wants
+    - Example `columns`: ["RIGHT_ASCENSION", "DECLINATION", "OBJECT_ID"]
 
     Args:
         catalog_path: Path to FITS file
@@ -325,11 +328,14 @@ def get_catalog_objects(
                      Local: absolute path or relative to CATALOG_BASE_PATH
         start: Starting row index (0-based, default: 0)
         limit: Maximum number of rows to return (default: 100, max recommended: 1000)
-        columns: List of column names to include (default: all columns)
-                Example: ["RIGHT_ASCENSION", "DECLINATION", "MAGNITUDE"]
+        columns: Optional list of field/column names to return.
+                 - None or omitted: return all columns
+                 - Non-empty list: return only listed columns
+                 Example: ["RIGHT_ASCENSION", "DECLINATION", "MAGNITUDE"]
 
     Returns:
         JSON with object data including start/end indices, total count, and row values
+        (rows include either all columns or only user-selected columns)
     """
     try:
         resolved_path = resolve_catalog_path(catalog_path)
@@ -342,26 +348,39 @@ def get_catalog_objects(
 
 
 @mcp.tool()
-def resolve_tile_id(ra: float, dec: float, catalog_path: str = "") -> str:
+def resolve_tile_id(
+    ra: Optional[float] = None,
+    dec: Optional[float] = None,
+    catalog_path: str = "",
+) -> str:
     """Resolve Euclid tile ID by sky coordinate.
 
     Resolution strategy:
     1) If catalog_path provided: parse tile from filename
     2) If not found: inspect FITS header keywords
-    3) If still not found: deterministic RA/DEC mock mapping
+    3) If RA/DEC missing and catalog_path provided: try to infer coordinates from file
+    4) If still not found and RA/DEC available: deterministic RA/DEC mock mapping
 
     Args:
-        ra: Right ascension in degrees, range [0, 360)
-        dec: Declination in degrees, range [-90, 90]
+        ra: Optional right ascension in degrees, range [0, 360)
+        dec: Optional declination in degrees, range [-90, 90]
         catalog_path: Optional local or s3 path to Euclid FITS catalog
 
     Returns:
         JSON string with tile_id and metadata
     """
     try:
+        input_ra = float(ra) if ra is not None else None
+        input_dec = float(dec) if dec is not None else None
+
         resolved_path = resolve_catalog_path(catalog_path) if catalog_path else ""
 
         result = None
+        effective_ra = input_ra
+        effective_dec = input_dec
+        coordinate_source = (
+            "input" if input_ra is not None and input_dec is not None else "unknown"
+        )
 
         # 1) Filename extraction (fast, no file read)
         if resolved_path:
@@ -379,7 +398,9 @@ def resolve_tile_id(ra: float, dec: float, catalog_path: str = "") -> str:
                     with fits.open(io.BytesIO(header_data)) as hdul:
                         header_result = None
                         for hdu in hdul:
-                            header_result = resolve_tile_id_from_header(dict(hdu.header))
+                            header_result = resolve_tile_id_from_header(
+                                dict(hdu.header)
+                            )
                             if header_result:
                                 break
                         result = header_result
@@ -388,7 +409,9 @@ def resolve_tile_id(ra: float, dec: float, catalog_path: str = "") -> str:
                         with fits.open(fobj) as hdul:
                             header_result = None
                             for hdu in hdul:
-                                header_result = resolve_tile_id_from_header(dict(hdu.header))
+                                header_result = resolve_tile_id_from_header(
+                                    dict(hdu.header)
+                                )
                                 if header_result:
                                     break
                             result = header_result
@@ -396,14 +419,62 @@ def resolve_tile_id(ra: float, dec: float, catalog_path: str = "") -> str:
                 # Ignore header parse errors and continue to mock fallback
                 pass
 
-        # 3) Deterministic mock fallback
+        # 3) If coordinates are missing, try infer from catalog coordinate ranges
+        if resolved_path and (effective_ra is None or effective_dec is None):
+            try:
+                storage, _ = get_storage_backend(resolved_path)
+                with FITSCatalogParser(resolved_path, storage=storage) as parser:
+                    info = parser.get_basic_info()
+
+                ranges = info.get("coordinate_ranges")
+                if isinstance(ranges, dict):
+                    inferred_ra = None
+                    inferred_dec = None
+                    if "ra_min" in ranges and "ra_max" in ranges:
+                        inferred_ra = (
+                            float(ranges["ra_min"]) + float(ranges["ra_max"])
+                        ) / 2.0
+                    if "dec_min" in ranges and "dec_max" in ranges:
+                        inferred_dec = (
+                            float(ranges["dec_min"]) + float(ranges["dec_max"])
+                        ) / 2.0
+
+                    if effective_ra is None and inferred_ra is not None:
+                        effective_ra = inferred_ra
+                    if effective_dec is None and inferred_dec is not None:
+                        effective_dec = inferred_dec
+
+                    if effective_ra is not None and effective_dec is not None:
+                        coordinate_source = "catalog_coordinate_range_center"
+            except Exception:
+                # Keep best-effort behavior; coordinates may remain unset
+                pass
+
+        # 4) Deterministic mock fallback
         if result is None:
-            result = resolve_tile_id_mock(ra=float(ra), dec=float(dec))
+            if effective_ra is None or effective_dec is None:
+                return json.dumps(
+                    {
+                        "error": (
+                            "Unable to resolve tile_id: no tile token in filename/header and "
+                            "RA/DEC unavailable. Provide ra+dec or a catalog containing "
+                            "RIGHT_ASCENSION/DECLINATION columns."
+                        ),
+                        "catalog_path": resolved_path if resolved_path else None,
+                    }
+                )
+            result = resolve_tile_id_mock(ra=effective_ra, dec=effective_dec)
+            if coordinate_source == "unknown":
+                coordinate_source = "mock_input_or_inferred"
+
+        if effective_ra is None and effective_dec is None:
+            coordinate_source = "not_available"
 
         return json.dumps(
             {
-                "ra": float(ra),
-                "dec": float(dec),
+                "ra": effective_ra,
+                "dec": effective_dec,
+                "coordinate_source": coordinate_source,
                 "tile_id": result.tile_id,
                 "catalog_path": resolved_path if resolved_path else None,
                 "mapping": {
@@ -423,10 +494,10 @@ def resolve_tile_id(ra: float, dec: float, catalog_path: str = "") -> str:
 
 if __name__ == "__main__":
     # Print environment configuration on startup
-    print("=" * 60)
-    print("Euclid Catalog MCP Server - Environment Configuration")
-    print("=" * 60)
-    print(f"CATALOG_DATA_PATH: {CATALOG_BASE_PATH}")
+    print("=" * 60, file=sys.stderr)
+    print("Euclid Catalog MCP Server - Environment Configuration", file=sys.stderr)
+    print("=" * 60, file=sys.stderr)
+    print(f"CATALOG_DATA_PATH: {CATALOG_BASE_PATH}", file=sys.stderr)
 
     # S3 Configuration
     aws_access_key = os.getenv("AWS_ACCESS_KEY_ID")
@@ -434,22 +505,41 @@ if __name__ == "__main__":
     aws_endpoint = os.getenv("AWS_ENDPOINT_URL")
     aws_region = os.getenv("AWS_REGION", "not set")
 
-    print("\nS3 Configuration:")
-    print(f"  AWS_ACCESS_KEY_ID: {'***set***' if aws_access_key else 'NOT SET'}")
-    print(f"  AWS_SECRET_ACCESS_KEY: {'***set***' if aws_secret_key else 'NOT SET'}")
+    print("\nS3 Configuration:", file=sys.stderr)
     print(
-        f"  AWS_ENDPOINT_URL: {aws_endpoint if aws_endpoint else 'NOT SET (using default)'}"
+        f"  AWS_ACCESS_KEY_ID: {'***set***' if aws_access_key else 'NOT SET'}",
+        file=sys.stderr,
     )
-    print(f"  AWS_REGION: {aws_region}")
-    print("=" * 60)
-    print()
+    print(
+        f"  AWS_SECRET_ACCESS_KEY: {'***set***' if aws_secret_key else 'NOT SET'}",
+        file=sys.stderr,
+    )
+    print(
+        f"  AWS_ENDPOINT_URL: {aws_endpoint if aws_endpoint else 'NOT SET (using default)'}",
+        file=sys.stderr,
+    )
+    print(f"  AWS_REGION: {aws_region}", file=sys.stderr)
+    print("=" * 60, file=sys.stderr)
+    print(file=sys.stderr)
 
     if "--stdio" in sys.argv:
         # Run in stdio mode (for MCP Inspector with stdio transport)
-        print("Starting server in STDIO mode...")
+        print("Starting server in STDIO mode...", file=sys.stderr)
         mcp.run(transport="stdio")
     else:
-        # Run SSE server on 0.0.0.0 for devcontainer access (default)
-        # This allows N8N and other HTTP clients to connect
-        print("Starting server in SSE mode on 0.0.0.0:8000...")
-        mcp.run(transport="sse", host="0.0.0.0", port=8000)
+        http_host = os.getenv("MCP_HTTP_HOST", "0.0.0.0")
+        http_port = int(os.getenv("MCP_HTTP_PORT", "8000"))
+        http_path = os.getenv("MCP_HTTP_PATH", "/mcp")
+
+        # Run Streamable HTTP server on 0.0.0.0 for devcontainer access (default)
+        # This allows MCP Inspector and HTTP clients to connect without stdio proxy.
+        print(
+            f"Starting server in streamable-http mode on {http_host}:{http_port}{http_path}...",
+            file=sys.stderr,
+        )
+        mcp.run(
+            transport="streamable-http",
+            host=http_host,
+            port=http_port,
+            path=http_path,
+        )

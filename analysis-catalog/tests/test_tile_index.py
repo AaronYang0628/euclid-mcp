@@ -13,7 +13,9 @@ def test_resolve_tile_id_mock_is_deterministic():
     a = resolve_tile_id_mock(ra=51.12015772112324, dec=-26.971838908444358)
     b = resolve_tile_id_mock(ra=51.12015772112324, dec=-26.971838908444358)
     assert a.tile_id == b.tile_id
-    assert a.method == "mock_sha1_radec"
+    assert a.method == "mock_numeric_sha1_radec"
+    assert a.tile_id.isdigit()
+    assert len(a.tile_id) == 9
 
 
 def test_resolve_tile_id_mock_validates_ra():
