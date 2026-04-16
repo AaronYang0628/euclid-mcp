@@ -9,13 +9,13 @@ cd /workspaces/euclid-mcp/analysis-catalog
 make inspect-http
 ```
 
-启动后在浏览器打开：`http://127.0.0.1:6275`
+启动后在浏览器打开：`http://127.0.0.1:6395`
 
 Inspector 中填写：
 
 - Transport: `streamable-http`
-- URL: `http://127.0.0.1:8000/mcp`
-- Proxy Address: `http://127.0.0.1:6278`
+- URL: `http://127.0.0.1:8010/mcp`
+- Proxy Address: `http://localhost:6398`
 
 ## 2) 可选自定义端口
 
