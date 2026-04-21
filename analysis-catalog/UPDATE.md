@@ -62,6 +62,11 @@ make inspect-stdio
   - `src/euclid_catalog_mcp/tile_index.py`
   - `tests/test_tile_index.py`
 
+5. **工具命名优化**
+
+- 将工具名统一为更直白的：`list_fits_in`
+- 不再保留旧名称兼容别名
+
 ## 开发者常见问题
 
 ### 0) `get_catalog_objects` 如何返回指定字段

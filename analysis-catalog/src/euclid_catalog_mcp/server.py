@@ -97,7 +97,7 @@ def resolve_catalog_path(catalog_path: str) -> str:
 
 
 @mcp.tool()
-def list_catalogs(path: str = "") -> str:
+def list_fits_in(path: str = "") -> str:
     """List all available FITS catalog files in a directory.
 
     Use this tool when you need to:

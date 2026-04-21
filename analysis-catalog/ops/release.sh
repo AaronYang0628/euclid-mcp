@@ -18,6 +18,46 @@ SKIP_PUSH="false"
 SKIP_SYNC="false"
 COMMIT_CHANGES="false"
 PUSH_GIT="false"
+PODMAN_GLOBAL_OPTS="${PODMAN_GLOBAL_OPTS:-}"
+PODMAN_BUILD_OPTS="${PODMAN_BUILD_OPTS:-}"
+PODMAN_PUSH_OPTS="${PODMAN_PUSH_OPTS:-}"
+PODMAN_LOGIN_OPTS="${PODMAN_LOGIN_OPTS:-}"
+
+podman_cmd() {
+  if [[ -n "$PODMAN_GLOBAL_OPTS" ]]; then
+    # shellcheck disable=SC2086
+    podman $PODMAN_GLOBAL_OPTS "$@"
+  else
+    podman "$@"
+  fi
+}
+
+podman_build_cmd() {
+  if [[ -n "$PODMAN_BUILD_OPTS" ]]; then
+    # shellcheck disable=SC2086
+    podman_cmd build $PODMAN_BUILD_OPTS "$@"
+  else
+    podman_cmd build "$@"
+  fi
+}
+
+podman_push_cmd() {
+  if [[ -n "$PODMAN_PUSH_OPTS" ]]; then
+    # shellcheck disable=SC2086
+    podman_cmd push $PODMAN_PUSH_OPTS "$@"
+  else
+    podman_cmd push "$@"
+  fi
+}
+
+podman_login_cmd() {
+  if [[ -n "$PODMAN_LOGIN_OPTS" ]]; then
+    # shellcheck disable=SC2086
+    podman_cmd login $PODMAN_LOGIN_OPTS "$@"
+  else
+    podman_cmd login "$@"
+  fi
+}
 
 usage() {
   cat <<'EOF'
@@ -63,7 +103,7 @@ registry_from_image_repo() {
 
 check_registry_login() {
   local registry="$1"
-  if podman login --get-login "$registry" >/dev/null 2>&1; then
+  if podman_login_cmd --get-login "$registry" >/dev/null 2>&1; then
     return 0
   fi
 
@@ -346,14 +386,14 @@ echo "    argocd app:   ${ARGOCD_APP}"
 if [[ "$SKIP_BUILD" != "true" ]]; then
   require_cmd podman
   echo "==> Building image"
-  podman build -t "$IMAGE_REF" "$PROJECT_DIR"
+  podman_build_cmd -t "$IMAGE_REF" "$PROJECT_DIR"
 fi
 
 if [[ "$SKIP_PUSH" != "true" ]]; then
   require_cmd podman
   check_registry_login "$REGISTRY"
   echo "==> Pushing image"
-  if ! podman push "$IMAGE_REF"; then
+  if ! podman_push_cmd "$IMAGE_REF"; then
     echo "Push failed for ${IMAGE_REF}" >&2
     echo "Common reasons:" >&2
     echo "  1) registry login expired -> podman login ${REGISTRY}" >&2

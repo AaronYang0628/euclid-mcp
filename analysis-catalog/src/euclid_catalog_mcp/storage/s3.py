@@ -45,30 +45,62 @@ class S3SeekableStream:
         # Don't read past EOF
         size = min(size, self.size - self.position)
 
-        # Check if we need to fetch more data
-        buffer_end = self.buffer_start + len(self.buffer)
-        if self.position < self.buffer_start or self.position >= buffer_end:
-            # Need to fetch new data
-            chunk_size = max(size, 1024 * 1024)  # At least 1MB chunks
-            end_byte = min(self.position + chunk_size - 1, self.size - 1)
+        remaining = size
+        chunks = []
 
-            # Validate range before making request
-            if self.position > self.size - 1:
-                return b""
+        while remaining > 0 and self.position < self.size:
+            # Check if current position is in buffer
+            buffer_end = self.buffer_start + len(self.buffer)
+            if self.position < self.buffer_start or self.position >= buffer_end:
+                # Need to fetch new data
+                chunk_size = max(remaining, 1024 * 1024)  # At least 1MB chunks
+                end_byte = min(self.position + chunk_size - 1, self.size - 1)
 
-            response = self.s3_client.get_object(
-                Bucket=self.bucket,
-                Key=self.key,
-                Range=f"bytes={self.position}-{end_byte}",
-            )
-            self.buffer = response["Body"].read()
-            self.buffer_start = self.position
+                # Validate range before making request
+                if self.position > self.size - 1:
+                    break
 
-        # Read from buffer
-        offset = self.position - self.buffer_start
-        data = self.buffer[offset : offset + size]
-        self.position += len(data)
-        return data
+                response = self.s3_client.get_object(
+                    Bucket=self.bucket,
+                    Key=self.key,
+                    Range=f"bytes={self.position}-{end_byte}",
+                )
+                self.buffer = response["Body"].read()
+                self.buffer_start = self.position
+
+                # Defensive check to avoid infinite loop on unexpected empty response
+                if not self.buffer:
+                    break
+
+            # Read from current buffer window
+            offset = self.position - self.buffer_start
+            available = len(self.buffer) - offset
+            if available <= 0:
+                break
+
+            take = min(available, remaining)
+            piece = self.buffer[offset : offset + take]
+            chunks.append(piece)
+            self.position += len(piece)
+            remaining -= len(piece)
+
+        return b"".join(chunks)
+
+    def readinto(self, b) -> int:
+        """Read bytes directly into a writable bytes-like object."""
+        data = self.read(len(b))
+        n = len(data)
+        if n:
+            b[:n] = data
+        return n
+
+    def readable(self) -> bool:
+        """Return True to indicate stream is readable."""
+        return True
+
+    def seekable(self) -> bool:
+        """Return True to indicate stream supports random access."""
+        return True
 
     def seek(self, offset: int, whence: int = 0) -> int:
         """Seek to position in S3 object."""

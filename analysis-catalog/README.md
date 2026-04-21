@@ -26,7 +26,7 @@ make inspect-http CLIENT_PORT=6395 SERVER_PORT=6398 MCP_HTTP_PORT=8010
 
 ## 3) 常用工具
 
-- `list_catalogs`: 列出目录中的 FITS catalog
+- `list_fits_in`: 列出目录中的 FITS catalog
 - `parse_fits_header_only`: 快速查看 FITS 头（推荐先用）
 - `get_catalog_info_with_stats`: 读取数据并给出范围统计
 - `get_catalog_fields`: 字段统计信息
